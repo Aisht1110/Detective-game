@@ -1,0 +1,6 @@
+{
+  "name": "True Detective: Room 204 — 3D Noir Case Simulator",
+  "description": "Investigate the Room 204 motel homicide in an immersive 3D Three.js neo-noir crime scene with interactive physical evidence, UV forensics, warrants, and suspect interrogations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

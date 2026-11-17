@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CASE FILE #409: THE MOTEL 204 HOMICIDE (2D PHOTO EDITION)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090a0f;
+            color: #e2e8f0;
+            overflow: hidden;
+            user-select: none;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* CRT & Noir Scanline Overlay */
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.85); opacity: 0.9; }
+            100% { transform: scale(1.75); opacity: 0; }
+        }
+        .evidence-pin::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border: 2px solid #f59e0b;
+            border-radius: 9999px;
+            animation: pulse-ring 1.6s infinite;
+        }
+        .evidence-pin.unlocked::before {
+            border-color: #10b981;
+        }
+        .crime-photo-container {
+            background-image: radial-gradient(circle at center, #1e293b 0%, #090a0f 100%);
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden flex flex-col">
+
+    <!-- Atmospheric Vignette & Scanlines -->
+    <div class="fixed inset-0 pointer-events-none z-10 crt-overlay" style="box-shadow: inset 0 0 110px rgba(0,0,0,0.85);"></div>
+
+    <!-- Top Detective Status Bar -->
+    <header class="relative z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-inner">
+                <i class="fa-solid fa-camera-retro text-lg"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs mono uppercase tracking-widest text-amber-500 font-bold">HOMICIDE PHOTOGRAPHIC UNIT</span>
+                    <span class="text-[10px] mono bg-red-950/90 text-red-400 border border-red-800/60 px-2 py-0.5 rounded uppercase">2D Forensic Board</span>
+                </div>
+                <h1 class="text-sm sm:text-base font-bold text-slate-100 tracking-tight">CASE #409: THE ROOM 204 MURDER (VICTOR VANCE)</h1>
+            </div>
+        </div>
+
+        <!-- Progress Metrics & AI Generator Button -->
+        <div class="flex items-center space-x-3 text-xs mono">
+            <div class="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center space-x-2">
+                <i class="fa-solid fa-folder-open text-amber-400"></i>
+                <span class="text-slate-400">Clues:</span>
+                <span id="clue-counter" class="text-white font-bold">2 / 10</span>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg hidden sm:flex items-center space-x-2">
+                <i class="fa-solid fa-scale-balanced text-cyan-400"></i>
+                <span class="text-slate-400">Warrants:</span>
+                <span id="warrant-counter" class="text-white font-bold">0 / 3</span>
+            </div>
+            <button onclick="generateLiveSceneAIImage()" id="generate-scene-btn" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-lg">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>AI Render This Scene Photo</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN 2D INTERACTIVE CRIME SCENE PHOTO VIEWPORT -->
+    <main class="relative flex-1 w-full overflow-hidden flex flex-col lg:flex-row bg-slate-950 pb-16">
+        
+        <!-- Left Camera Angle / Room Zone Switcher + Prompt Inspector -->
+        <aside class="w-full lg:w-80 bg-slate-950/95 border-b lg:border-b-0 lg:border-r border-slate-800/90 p-4 flex flex-col justify-between z-20 overflow-y-auto">
+            <div class="space-y-4">
+                <div>
+                    <span class="text-[11px] mono uppercase tracking-wider text-amber-400 font-bold block mb-2">
+                        <i class="fa-solid fa-images mr-1.5"></i>Select Crime Scene Camera Feed
+                    </span>
+                    <div id="scene-angle-buttons" class="space-y-2">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Live AI Prompt Display Box for Current Camera View -->
+                <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] mono uppercase text-cyan-400 font-bold">
+                            <i class="fa-solid fa-terminal mr-1"></i>AI Image Prompt (In Code)
+                        </span>
+                        <button onclick="copyActiveScenePrompt()" class="text-[10px] mono bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-0.5 rounded border border-slate-700 transition">
+                            <i class="fa-regular fa-copy mr-1"></i>Copy Prompt
+                        </button>
+                    </div>
+                    <p id="active-scene-prompt-text" class="text-[11px] text-slate-300 font-mono leading-relaxed select-all bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 max-h-36 overflow-y-auto"></p>
+                    <p class="text-[10px] text-slate-400 leading-normal">
+                        Click <strong>"AI Render This Scene Photo"</strong> in the top bar to generate a photorealistic image using this exact prompt via the Gemini Image API, or click any glowing marker on the board.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Detective Field Tip -->
+            <div class="mt-4 pt-3 border-t border-slate-800/80 text-xs text-slate-400 space-y-1">
+                <div class="text-amber-400 font-semibold mono text-[11px]"><i class="fa-solid fa-magnifying-glass mr-1"></i>HOW TO INVESTIGATE:</div>
+                <p class="text-[11px] leading-relaxed">Click the numbered forensic pins (<span class="text-amber-400 font-bold">#1 - #6</span>) on the 2D crime scene photograph to bag evidence, view close-up forensic photos, and unlock warrants.</p>
+            </div>
+        </aside>
+
+        <!-- Center Interactive 2D Crime Scene Canvas / Photo Board -->
+        <section class="relative flex-1 h-full crime-photo-container flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+            
+            <!-- Interactive 16:9 Forensic Photo Frame -->
+            <div id="interactive-photo-stage" class="relative w-full max-w-5xl aspect-[16/9] bg-slate-950 rounded-2xl border-2 border-slate-800 shadow-2xl overflow-hidden">
+                
+                <!-- Background Scene Image (Noir SVG Illustration or Live AI Generated Photo) -->
+                <img id="scene-background-img" src="" alt="Crime Scene View" class="w-full h-full object-cover transition-all duration-500" />
+
+                <!-- AI Generation Loading Overlay -->
+                <div id="scene-ai-loading" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
+                    <div class="w-12 h-12 rounded-full border-4 border-amber-500 border-t-transparent animate-spin mb-4"></div>
+                    <h3 class="text-sm sm:text-base font-bold mono uppercase text-amber-400">Developing Forensic Crime Scene Photograph...</h3>
+                    <p id="scene-ai-loading-prompt" class="text-xs text-slate-400 max-w-lg mt-2 font-mono"></p>
+                </div>
+
+                <!-- Camera HUD Overlay Metadata -->
+                <div class="absolute top-3 left-3 z-20 pointer-events-none flex items-center space-x-2 bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-lg">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    <span id="scene-hud-title" class="text-[11px] mono text-slate-200 font-bold">CAM 01 // FULL ROOM 204 OVERVIEW</span>
+                </div>
+                <div class="absolute bottom-3 right-3 z-20 pointer-events-none bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-lg text-[11px] mono text-amber-400">
+                    TIMESTAMP: 00:34:18 HRS // ISO 3200 // 35MM FORENSIC LENS
+                </div>
+
+                <!-- Clickable Evidence Hotspot Pins Container -->
+                <div id="photo-hotspots-layer" class="absolute inset-0 z-20">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Notification Toast Banner -->
+    <div id="toast-banner" class="fixed top-20 right-4 z-50 hidden max-w-sm bg-slate-950/95 border-l-4 border-amber-500 text-slate-100 px-4 py-3 rounded-lg shadow-2xl backdrop-blur-md transition-all">
+        <div class="flex items-start space-x-3">
+            <i id="toast-icon" class="fa-solid fa-bell text-amber-400 mt-0.5"></i>
+            <div>
+                <h4 id="toast-title" class="text-xs font-bold mono uppercase tracking-wider text-amber-400">New Clue Logged</h4>
+                <p id="toast-msg" class="text-xs text-slate-300 mt-0.5">Added to your evidence locker.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN MODAL OVERLAY CONTAINER (For Evidence, Warrants, Interrogation, Archive, AI Prompts, Solve) -->
+    <div id="modal-backdrop" class="fixed inset-0 z-30 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 pb-20">
+        
+        <!-- 1. EVIDENCE LOCKER & CRIME SCENE PHOTOS PANEL -->
+        <div id="panel-evidence" class="modal-panel hidden w-full max-w-5xl h-[82vh] bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <i class="fa-solid fa-microscope text-amber-400"></i>
+                    <h2 class="text-sm sm:text-base font-bold mono uppercase tracking-wider text-white">Forensic Evidence & Crime Scene Photographs</h2>
+                </div>
+                <button onclick="switchTab('scene')" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs mono">
+                    <i class="fa-solid fa-xmark mr-1"></i>Return to Crime Photo
+                </button>
+            </div>
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
+                <div class="md:col-span-5 border-r border-slate-800 p-4 overflow-y-auto space-y-2.5" id="evidence-list-container"></div>
+                <div class="md:col-span-7 p-5 overflow-y-auto flex flex-col justify-between bg-slate-950/50" id="evidence-detail-container"></div>
+            </div>
+        </div>
+
+        <!-- 2. WARRANTS & PERMISSIONS PANEL -->
+        <div id="panel-warrants" class="modal-panel hidden w-full max-w-5xl h-[82vh] bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <i class="fa-solid fa-file-signature text-cyan-400"></i>
+                    <h2 class="text-sm sm:text-base font-bold mono uppercase tracking-wider text-white">Judicial Warrants & Forensic Permissions</h2>
+                </div>
+                <button onclick="switchTab('scene')" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs mono">
+                    <i class="fa-solid fa-xmark mr-1"></i>Return to Crime Photo
+                </button>
+            </div>
+            <div class="p-4 bg-cyan-950/20 border-b border-cyan-900/40 text-xs text-cyan-200 flex items-center space-x-3">
+                <i class="fa-solid fa-circle-info text-cyan-400 text-base"></i>
+                <span><strong>PROBABLE CAUSE PROTOCOL:</strong> Judge Vance & Captain Miller will not sign off on invasive warrants unless you attach <strong>2 valid pieces of discovered evidence</strong> that justify the search.</span>
+            </div>
+            <div class="flex-1 p-5 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-4" id="warrants-container"></div>
+        </div>
+
+        <!-- 3. 1-ON-1 INTERROGATION & WITNESS ROOM PANEL -->
+        <div id="panel-interrogate" class="modal-panel hidden w-full max-w-6xl h-[84vh] bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                    <h2 class="text-sm sm:text-base font-bold mono uppercase tracking-wider text-white">1-on-1 Interrogation & Witness Interview Room</h2>
+                </div>
+                <button onclick="switchTab('scene')" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs mono">
+                    <i class="fa-solid fa-xmark mr-1"></i>Leave Room
+                </button>
+            </div>
+
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
+                <div class="md:col-span-4 border-r border-slate-800 bg-slate-950/60 p-4 flex flex-col justify-between overflow-y-auto">
+                    <div>
+                        <h3 class="text-xs mono uppercase text-slate-400 mb-2.5 font-semibold">Select Person to Question Anytime:</h3>
+                        <div id="suspect-roster" class="space-y-2"></div>
+                        <div id="active-suspect-card" class="mt-4 p-3.5 bg-slate-900 border border-slate-800 rounded-xl"></div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800">
+                        <label class="block text-xs mono uppercase text-amber-400 font-semibold mb-1.5">
+                            <i class="fa-solid fa-hand-fist mr-1"></i>Slam Evidence on Table (Optional):
+                        </label>
+                        <select id="interrogation-evidence-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+                            <option value="">-- No Evidence Attached (Verbal Question Only) --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="md:col-span-8 flex flex-col h-full overflow-hidden bg-slate-900/40">
+                    <div id="chat-transcript" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
+                    <div id="quick-questions-bar" class="px-4 py-2 bg-slate-950/80 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto whitespace-nowrap"></div>
+                    <form id="interrogation-form" onsubmit="handleInterrogationSubmit(event)" class="p-3.5 bg-slate-950 border-t border-slate-800 flex items-center gap-2">
+                        <input id="interrogation-input" type="text" placeholder="Ask anything (e.g., 'Where were you at 11:42 PM?' or 'Explain this broken watch!')..." 
+                            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500" autocomplete="off">
+                        <button id="interrogation-send-btn" type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition flex items-center space-x-2">
+                            <span>Question</span>
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. PAST CASES ARCHIVE PANEL -->
+        <div id="panel-archive" class="modal-panel hidden w-full max-w-5xl h-[82vh] bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <i class="fa-solid fa-box-archive text-amber-400"></i>
+                    <h2 class="text-sm sm:text-base font-bold mono uppercase tracking-wider text-white">Precinct Case Archive (Previous & Linked Cases)</h2>
+                </div>
+                <button onclick="switchTab('scene')" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs mono">
+                    <i class="fa-solid fa-xmark mr-1"></i>Return to Crime Photo
+                </button>
+            </div>
+            <div class="p-4 bg-amber-950/20 border-b border-amber-900/40 text-xs text-amber-200 flex items-center justify-between">
+                <span><i class="fa-solid fa-lightbulb text-amber-400 mr-2"></i>Reviewing past precinct cases can reveal repeating signatures, blackmail rings, or connections to your current homicide case.</span>
+            </div>
+            <div class="flex-1 p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-3 gap-4" id="archive-cases-container"></div>
+        </div>
+
+        <!-- 5. AI IMAGE PROMPTS STUDIO (FOR GAME DEV & LIVE GENERATION) -->
+        <div id="panel-prompts" class="modal-panel hidden w-full max-w-6xl h-[84vh] bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                    <h2 class="text-sm sm:text-base font-bold mono uppercase tracking-wider text-white">Crime Scene AI Image Prompt Library & Live Generator</h2>
+                </div>
+                <button onclick="switchTab('scene')" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs mono">
+                    <i class="fa-solid fa-xmark mr-1"></i>Return to Crime Photo
+                </button>
+            </div>
+            <div class="p-4 bg-amber-950/20 border-b border-amber-900/40 text-xs text-amber-200 flex flex-wrap items-center justify-between gap-2">
+                <span><i class="fa-solid fa-code text-amber-400 mr-2"></i>All production-ready AI prompts for every crime scene angle, close-up evidence macro shot, and suspect portrait are stored in <code>AI_CRIME_SCENE_PROMPTS</code> inside the code. You can copy them or click <strong>Generate Live AI Image</strong> right here!</span>
+            </div>
+            <div class="flex-1 p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4" id="prompts-studio-container">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+        <!-- 6. FILE CHARGES / SOLVE CASE PANEL -->
+        <div id="panel-solve" class="modal-panel hidden w-full max-w-3xl max-h-[84vh] bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <i class="fa-solid fa-handcuffs text-red-400"></i>
+                    <h2 class="text-sm sm:text-base font-bold mono uppercase tracking-wider text-white">District Attorney Indictment & Arrest Warrant</h2>
+                </div>
+                <button onclick="switchTab('scene')" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs mono">
+                    <i class="fa-solid fa-xmark mr-1"></i>Cancel
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-5">
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Before the District Attorney authorizes an arrest for the murder of <strong>Victor Vance</strong> in Room 204, you must establish the killer, the exact cause of death, the motive, and the decisive forensic evidence.
+                </p>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs mono uppercase text-amber-400 font-bold mb-1.5">1. Primary Suspect (Who killed Victor Vance?)</label>
+                        <select id="solve-killer" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
+                            <option value="">-- Select Suspect --</option>
+                            <option value="suspect_rk">Robert King (Business Partner)</option>
+                            <option value="suspect_elena">Elena Vance (Estranged Wife)</option>
+                            <option value="suspect_marcus">Marcus Cole (Night Clerk / Ex-Con)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs mono uppercase text-amber-400 font-bold mb-1.5">2. True Cause of Death (How was the murder committed?)</label>
+                        <select id="solve-method" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
+                            <option value="">-- Select Murder Method --</option>
+                            <option value="blunt_trophy">Blunt Force Trauma from Brass Trophy</option>
+                            <option value="cyanide_whiskey">Lethal Cyanide Poisoning in Whiskey Glass (Staged as Blunt Assault)</option>
+                            <option value="gunshot">Silenced 9mm Gunshot from Balcony</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs mono uppercase text-amber-400 font-bold mb-1.5">3. Decisive Proof Linking Killer to the Lethal Weapon/Poison</label>
+                        <select id="solve-evidence" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white"></select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs mono uppercase text-amber-400 font-bold mb-1.5">4. Primary Motive</label>
+                        <select id="solve-motive" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
+                            <option value="">-- Select Motive --</option>
+                            <option value="embezzlement">Cover up $400k corporate embezzlement</option>
+                            <option value="insurance_divorce">$2M Life Insurance Payout before Divorce Clause took effect at Midnight</option>
+                            <option value="blackmail_robbery">Motel Room Robbery & Extortion</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="solve-result-box" class="hidden p-4 rounded-xl border text-xs leading-relaxed"></div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button onclick="submitFinalIndictment()" class="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-2.5 rounded-xl text-sm shadow-lg transition flex items-center space-x-2">
+                        <i class="fa-solid fa-gavel"></i>
+                        <span>Execute Arrest Warrant</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Dock -->
+    <nav class="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-40 bg-slate-950/95 backdrop-blur-xl border border-slate-700/80 px-2.5 py-2 rounded-2xl shadow-2xl flex items-center space-x-1 sm:space-x-2">
+        <button id="nav-scene" onclick="switchTab('scene')" class="nav-btn bg-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition">
+            <i class="fa-solid fa-panorama"></i>
+            <span>2D Crime Scene</span>
+        </button>
+        <button id="nav-evidence" onclick="switchTab('evidence')" class="nav-btn text-slate-300 hover:bg-slate-800 px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition">
+            <i class="fa-solid fa-camera-retro text-amber-400"></i>
+            <span>Evidence & Photos</span>
+        </button>
+        <button id="nav-warrants" onclick="switchTab('warrants')" class="nav-btn text-slate-300 hover:bg-slate-800 px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition">
+            <i class="fa-solid fa-file-shield text-cyan-400"></i>
+            <span>Warrants</span>
+        </button>
+        <button id="nav-interrogate" onclick="switchTab('interrogate')" class="nav-btn text-slate-300 hover:bg-slate-800 px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition">
+            <i class="fa-solid fa-comments text-emerald-400"></i>
+            <span>1-on-1 Questioning</span>
+        </button>
+        <button id="nav-archive" onclick="switchTab('archive')" class="nav-btn text-slate-300 hover:bg-slate-800 px-3.5 py-2 rounded-xl text-xs mono hidden md:flex items-center space-x-2 transition">
+            <i class="fa-solid fa-folder-tree text-purple-400"></i>
+            <span>Past Cases</span>
+        </button>
+        <button id="nav-prompts" onclick="switchTab('prompts')" class="nav-btn text-slate-300 hover:bg-slate-800 px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-pink-400"></i>
+            <span>AI Prompts</span>
+        </button>
+        <button id="nav-solve" onclick="switchTab('solve')" class="nav-btn bg-red-950/80 hover:bg-red-800 text-red-200 border border-red-700/60 px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition">
+            <i class="fa-solid fa-handcuffs"></i>
+            <span class="hidden sm:inline">Solve Case</span>
+        </button>
+    </nav>
+
+    <script>
+        /****************************************************************************************
+         * 1. MASTER AI IMAGE GENERATION PROMPTS (READY TO USE FOR YOUR DETECTIVE GAME ASSETS)
+         * --------------------------------------------------------------------------------------
+         * You can copy these prompts into Midjourney, Stable Diffusion, Flux, or Gemini Imagen,
+         * OR click "AI Render This Scene Photo" inside the game to generate them live!
+         ****************************************************************************************/
+        const apiKey = ""; // Injected automatically by Canvas runtime
+
+        const AI_CRIME_SCENE_PROMPTS = {
+            // --- MAIN 2D INTERACTIVE ROOM CAMERA ANGLES ---
+            scene_wide_room204: {
+                title: "CAM 01 // Full Motel Room 204 Overview",
+                category: "2D Crime Scene Background (16:9)",
+                aspectRatio: "16:9",
+                prompt: "Cinematic neo-noir crime scene photograph, wide angle 35mm lens view inside a gritty 1990s roadside motel room (Room 204) at midnight. Red and blue police cruiser lights flashing through half-closed venetian blinds casting dramatic shadows across a worn patterned carpet. In the center floor is a white police chalk outline of a man in a dark suit with yellow plastic numbered evidence tents (#1 through #6) placed near a broken gold watch on the rug, a crystal whiskey glass on the nightstand, an overturned brass trophy near a wooden desk, financial papers under a green banker's lamp, and a metal trash bin near the door. True Detective season 1 atmosphere, hyper-detailed, photorealistic forensic photography, 8k resolution."
+            },
+            scene_desk_corner: {
+                title: "CAM 02 // Suspect Desk & Financial Audit Corner",
+                category: "2D Crime Scene Sub-View (16:9)",
+                aspectRatio: "16:9",
+                prompt: "Forensic crime scene photograph, medium close-up of a dark vintage oak motel desk illuminated by a glowing emerald green banker's lamp at night. Spread across the desk are printed corporate financial spreadsheets with red handwritten ink notes reading 'PAY BACK $400K'. On the floor beside the desk lies a heavy tarnished brass trophy with a dark blood smear on its base next to yellow police evidence marker #4 and #5. High contrast noir lighting, realistic police flash photography, 8k."
+            },
+            scene_nightstand_bed: {
+                title: "CAM 03 // Bedside Nightstand & Poisoned Drink",
+                category: "2D Crime Scene Sub-View (16:9)",
+                aspectRatio: "16:9",
+                prompt: "Gritty forensic macro photograph of a motel wooden nightstand beside an unmade bed at night. Sitting on the nightstand is a half-empty crystal whiskey tumbler containing amber scotch, with a distinct crimson red lipstick stain on the glass rim next to yellow police evidence marker #3. In the foreground near the carpet edge is a shattered luxury gold wristwatch frozen at 11:42 next to evidence marker #2. True Detective aesthetic, shallow depth of field, police camera flash, photorealistic."
+            },
+
+            // --- CLOSE-UP EVIDENCE MACRO PHOTOS ---
+            clue_broken_watch: {
+                title: "Evidence Macro: Broken Gold Watch (11:42 PM)",
+                category: "Forensic Close-up Photo",
+                aspectRatio: "16:9",
+                prompt: "Extreme macro forensic police photograph of a shattered luxury gold men's wristwatch lying on a dark burgundy motel carpet next to yellow plastic evidence tent #2. The crystal glass face is cracked and the gold hands are stopped at exactly 11:42. Engraved on the metallic bezel edge are the initials 'R.K.'. Harsh crime scene flash lighting, hyper-realistic textures."
+            },
+            clue_whiskey_glass: {
+                title: "Evidence Macro: Lipstick Whiskey Tumbler",
+                category: "Forensic Close-up Photo",
+                aspectRatio: "16:9",
+                prompt: "Forensic close-up photograph of a cut-crystal whiskey glass on a dark wooden motel nightstand next to yellow evidence marker #3. Inside is 20ml of amber scotch with a faint crystalline residue at the bottom, and a vivid dark crimson lipstick print on the top rim. Dramatic noir crime scene lighting, 85mm macro lens, photorealistic."
+            },
+            clue_bloody_trophy: {
+                title: "Evidence Macro: Bloodied Brass Trophy",
+                category: "Forensic Close-up Photo",
+                aspectRatio: "16:9",
+                prompt: "Forensic crime scene close-up photo of an overturned heavy brass corporate award trophy lying on a dark floor next to yellow evidence marker #4. A small dark crimson blood smudge is visible on the sharp base edge, dusted with white forensic fingerprint powder showing latent prints. Gritty police flash photography."
+            },
+            clue_cyanide_vial: {
+                title: "Evidence Macro: Empty Potassium Cyanide Vial",
+                category: "Forensic Close-up Photo",
+                aspectRatio: "16:9",
+                prompt: "Forensic macro photograph looking inside a dented metal motel wastebasket next to evidence marker #6. Half-buried under crumpled tissues is a small amber glass chemical vial with a white laboratory hazard label reading 'KCN - BATCH #88 - VANCE LABS'. Clinical forensic flash lighting, ultra-detailed."
+            },
+            clue_financial_ledger: {
+                title: "Evidence Macro: $400k Embezzlement Ledger",
+                category: "Forensic Close-up Photo",
+                aspectRatio: "16:9",
+                prompt: "Top-down forensic photograph of a torn corporate accounting ledger on a dark wooden desk under a green banker's lamp next to evidence marker #5. Red ink circles highlight a -$400,000 wire transfer to a shell company with an angry handwritten note at the top. Noir detective aesthetic, sharp focus."
+            },
+
+            // --- PAST COLD CASES ARCHIVE PHOTOS ---
+            cold_case_104: {
+                title: "Cold Case #104: The Harbor Warehouse Arson (2023)",
+                category: "Archive Case Photo",
+                aspectRatio: "16:9",
+                prompt: "Black and white grainy police archive photograph from 2023 showing a burned-out chemical storage warehouse at a rainy industrial harbor at night. Fire trucks and yellow police tape in the foreground, smoke rising from charred steel beams, noir photojournalism style."
+            },
+            cold_case_219: {
+                title: "Cold Case #219: The Velvet Lounge Poisoning (2024)",
+                category: "Archive Case Photo",
+                aspectRatio: "16:9",
+                prompt: "Atmospheric neo-noir crime scene photograph inside a smoky upscale jazz lounge booth at night. An overturned cocktail glass lies on a white tablecloth beside a leather booth, illuminated by neon pink and cyan bar signs and a police forensic flash."
+            }
+        };
+
+        /****************************************************************************************
+         * 2. 2D CRIME SCENE CAMERA ANGLES & CLICKABLE HOTSPOT COORDINATES
+         ****************************************************************************************/
+        let activeSceneAngleId = "scene_wide_room204";
+
+        // Generate detailed 2D Noir Illustrated Crime Scene SVGs (instant fallback before/without live AI render)
+        function createSceneAngleSVG(angleId) {
+            if (angleId === "scene_desk_corner") {
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="wallGrad2" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#0b111e"/><stop offset="100%" stop-color="#172033"/>
+                        </linearGradient>
+                        <radialGradient id="greenLamp" cx="0.65" cy="0.38" r="0.45">
+                            <stop offset="0%" stop-color="rgba(16,185,129,0.45)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+                        </radialGradient>
+                    </defs>
+                    <rect width="1280" height="500" fill="url(#wallGrad2)"/>
+                    <rect y="500" width="1280" height="220" fill="#181218"/>
+                    <circle cx="820" cy="280" r="420" fill="url(#greenLamp)"/>
+                    <!-- Oak Executive Desk -->
+                    <rect x="460" y="310" width="560" height="230" rx="8" fill="#2e1a10" stroke="#452719" stroke-width="4"/>
+                    <rect x="440" y="290" width="600" height="32" rx="4" fill="#3e2417" stroke="#5c3622" stroke-width="2"/>
+                    <!-- Banker Lamp -->
+                    <rect x="860" y="220" width="45" height="70" fill="#d97706"/>
+                    <polygon points="825,220 940,220 915,175 850,175" fill="#10b981" stroke="#34d399" stroke-width="3"/>
+                    <!-- Ledger Spreadsheets on Desk -->
+                    <g transform="translate(610, 265) rotate(-5)">
+                        <rect width="150" height="95" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+                        <line x1="15" y1="22" x2="135" y2="22" stroke="#dc2626" stroke-width="4"/>
+                        <line x1="15" y1="42" x2="125" y2="42" stroke="#475569" stroke-width="3"/>
+                        <line x1="15" y1="60" x2="130" y2="60" stroke="#475569" stroke-width="3"/>
+                        <text x="75" y="82" text-anchor="middle" fill="#dc2626" font-family="monospace" font-size="13" font-weight="bold">-$400,000 AUDIT</text>
+                    </g>
+                    <!-- Bloodied Brass Trophy on Floor -->
+                    <g transform="translate(320, 560) rotate(68)">
+                        <rect x="-25" y="45" width="50" height="22" fill="#1e293b" stroke="#fbbf24" stroke-width="2"/>
+                        <polygon points="-28,-45 28,-45 12,45 -12,45" fill="#d97706" stroke="#fde047" stroke-width="2"/>
+                        <circle cx="-18" cy="-38" r="18" fill="#991b1b" opacity="0.9"/>
+                    </g>
+                    <!-- Trash Bin near Door -->
+                    <rect x="1050" y="420" width="110" height="160" rx="10" fill="#1e293b" stroke="#475569" stroke-width="3"/>
+                    <rect x="1085" y="465" width="38" height="22" rx="4" fill="#06b6d4" opacity="0.8"/>
+                    <text x="40" y="685" fill="#64748b" font-family="monospace" font-size="16">SECTOR B: EXECUTIVE DESK, FLOOR TROPHY &amp; DOOR TRASH RECEPTACLE</text>
+                </svg>`;
+                return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+            }
+
+            if (angleId === "scene_nightstand_bed") {
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
+                    <defs>
+                        <radialGradient id="sirenGlow" cx="0.25" cy="0.3" r="0.6">
+                            <stop offset="0%" stop-color="rgba(239,68,68,0.28)"/>
+                            <stop offset="50%" stop-color="rgba(59,130,246,0.22)"/>
+                            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+                        </radialGradient>
+                    </defs>
+                    <rect width="1280" height="480" fill="#0d1322"/>
+                    <rect y="480" width="1280" height="240" fill="#23151c"/>
+                    <rect width="1280" height="720" fill="url(#sirenGlow)"/>
+                    <!-- Venetian Blinds Window -->
+                    <g stroke="#334155" stroke-width="6" opacity="0.7">
+                        <rect x="80" y="60" width="360" height="260" fill="#0f172a"/>
+                        <line x1="80" y1="100" x2="440" y2="100"/><line x1="80" y1="140" x2="440" y2="140"/>
+                        <line x1="80" y1="180" x2="440" y2="180"/><line x1="80" y1="220" x2="440" y2="220"/>
+                        <line x1="80" y1="260" x2="440" y2="260"/><line x1="80" y1="300" x2="440" y2="300"/>
+                    </g>
+                    <!-- Unmade Motel Bed -->
+                    <rect x="60" y="360" width="380" height="210" rx="10" fill="#1e293b" stroke="#334155" stroke-width="4"/>
+                    <!-- Wooden Nightstand -->
+                    <rect x="490" y="330" width="260" height="250" rx="8" fill="#3b1d11" stroke="#5c2d1c" stroke-width="4"/>
+                    <!-- Whiskey Glass with Crimson Lipstick -->
+                    <path d="M590 230 L650 230 L640 325 L600 325 Z" fill="rgba(245,158,11,0.25)" stroke="#fbbf24" stroke-width="3"/>
+                    <path d="M595 280 L645 280 L640 325 L600 325 Z" fill="rgba(217,119,6,0.75)"/>
+                    <ellipse cx="642" cy="236" rx="12" ry="6" fill="#ec4899"/>
+                    <!-- Victim Chalk Outline & Broken Watch on Carpet -->
+                    <ellipse cx="930" cy="560" rx="58" ry="38" fill="none" stroke="#f8fafc" stroke-width="5" stroke-dasharray="12,6"/>
+                    <circle cx="965" cy="548" r="26" fill="rgba(185,28,28,0.75)"/>
+                    <!-- Broken Gold Watch -->
+                    <circle cx="790" cy="610" r="28" fill="#1e293b" stroke="#fbbf24" stroke-width="5"/>
+                    <line x1="790" y1="610" x2="778" y2="592" stroke="#ffffff" stroke-width="3"/>
+                    <line x1="790" y1="610" x2="808" y2="604" stroke="#fbbf24" stroke-width="3"/>
+                    <text x="40" y="685" fill="#94a3b8" font-family="monospace" font-size="16">SECTOR C: BEDSIDE NIGHTSTAND, WHISKEY TUMBLER &amp; VICTIM FLOORPERIMETER</text>
+                </svg>`;
+                return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+            }
+
+            // Default: Full Room 204 Wide Overview
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
+                <defs>
+                    <linearGradient id="noirWall" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#070a12"/><stop offset="100%" stop-color="#141d2f"/>
+                    </linearGradient>
+                    <radialGradient id="ceilingBulb" cx="0.5" cy="0.1" r="0.7">
+                        <stop offset="0%" stop-color="rgba(245,158,11,0.22)"/><stop offset="100%" stop-color="rgba(5,7,12,0.85)"/>
+                    </radialGradient>
+                </defs>
+                <!-- Walls & Floor Perspective -->
+                <rect width="1280" height="430" fill="url(#noirWall)"/>
+                <polygon points="0,720 180,430 1100,430 1280,720" fill="#161f30" stroke="#334155" stroke-width="2"/>
+                <polygon points="260,690 360,475 920,475 1020,690" fill="#281922" stroke="#472836" stroke-width="2"/>
+                <rect width="1280" height="720" fill="url(#ceilingBulb)"/>
+
+                <!-- Left Window with Police Siren Glow -->
+                <polygon points="35,110 155,150 155,340 35,380" fill="#1e3a8a" opacity="0.45" stroke="#3b82f6" stroke-width="3"/>
+                <line x1="35" y1="180" x2="155" y2="205" stroke="#0f172a" stroke-width="6"/>
+                <line x1="35" y1="240" x2="155" y2="255" stroke="#0f172a" stroke-width="6"/>
+                <line x1="35" y1="300" x2="155" y2="305" stroke="#0f172a" stroke-width="6"/>
+
+                <!-- Motel Bed (Left) -->
+                <rect x="150" y="340" width="230" height="145" rx="6" fill="#334155" stroke="#475569" stroke-width="3"/>
+                <rect x="170" y="320" width="190" height="35" rx="4" fill="#94a3b8"/>
+
+                <!-- Nightstand & Whiskey Glass (#3) -->
+                <rect x="405" y="335" width="95" height="110" rx="4" fill="#3e1f14" stroke="#5c2f1f" stroke-width="2"/>
+                <rect x="440" y="298" width="24" height="36" rx="2" fill="rgba(245,158,11,0.75)" stroke="#fbbf24" stroke-width="2"/>
+                <circle cx="460" cy="302" r="5" fill="#ec4899"/>
+
+                <!-- Executive Desk & Banker Lamp (Right #5) -->
+                <rect x="780" y="320" width="260" height="135" rx="6" fill="#3b2314" stroke="#5c3720" stroke-width="3"/>
+                <polygon points="955,260 1005,260 992,235 968,235" fill="#10b981"/>
+                <rect x="835" y="302" width="75" height="22" fill="#f8fafc" stroke="#38bdf8" stroke-width="2"/>
+
+                <!-- Bloodied Brass Trophy on Floor (#4) -->
+                <polygon points="735,515 785,495 775,535" fill="#d97706" stroke="#fde047" stroke-width="2"/>
+                <circle cx="742" cy="512" r="9" fill="#991b1b"/>
+
+                <!-- Center Victim Chalk Outline (#1) -->
+                <ellipse cx="565" cy="525" rx="28" ry="20" fill="none" stroke="#f8fafc" stroke-width="4" stroke-dasharray="8,4"/>
+                <path d="M520,550 L615,550 L640,655 L495,655 Z" fill="none" stroke="#f8fafc" stroke-width="4" stroke-dasharray="10,5"/>
+                <!-- Shallow Blood Pool near Head -->
+                <circle cx="595" cy="520" r="18" fill="rgba(185,28,28,0.8)"/>
+
+                <!-- Broken Gold Watch near Hand (#2) -->
+                <circle cx="685" cy="595" r="16" fill="#fbbf24" stroke="#fef08a" stroke-width="3"/>
+
+                <!-- Trash Bin by Door (#6) -->
+                <rect x="1045" y="485" width="70" height="95" rx="6" fill="#334155" stroke="#64748b" stroke-width="3"/>
+                <rect x="1068" y="512" width="24" height="14" fill="#06b6d4"/>
+
+                <!-- Police Crime Scene Tape Ribbon -->
+                <polygon points="0,45 1280,115 1280,142 0,72" fill="#eab308" opacity="0.88"/>
+                <text x="640" y="102" text-anchor="middle" fill="#090a0f" font-family="monospace" font-size="18" font-weight="bold" letter-spacing="6">CRIME SCENE DO NOT CROSS // HOMICIDE UNIT // ROOM 204</text>
+            </svg>`;
+            return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+        }
+
+        const SCENE_ANGLES = [
+            {
+                id: "scene_wide_room204",
+                name: "CAM 01: Full Room 204 Overview",
+                subtitle: "All 6 Forensic Evidence Markers Visible",
+                promptKey: "scene_wide_room204",
+                customImageUrl: null,
+                hotspots: [
+                    { number: 1, clueId: "clue_corpse_inspection", x: 44.5, y: 74, label: "Marker #1: Victim Body & Shallow Head Wound" },
+                    { number: 2, clueId: "clue_broken_watch", x: 53.5, y: 82.5, label: "Marker #2: Broken Gold Watch (11:42 PM)" },
+                    { number: 3, clueId: "clue_whiskey_glass", x: 35.2, y: 43.5, label: "Marker #3: Lipstick Whiskey Glass" },
+                    { number: 4, clueId: "clue_bloody_trophy", x: 59.5, y: 71.5, label: "Marker #4: Bloodied Brass Trophy" },
+                    { number: 5, clueId: "clue_financial_ledger", x: 68.0, y: 43.5, label: "Marker #5: $400k Embezzlement Ledger" },
+                    { number: 6, clueId: "clue_cyanide_vial", x: 84.5, y: 72.0, label: "Marker #6: Trash Bin (Hidden Cyanide Vial)" }
+                ]
+            },
+            {
+                id: "scene_desk_corner",
+                name: "CAM 02: Suspect Desk & Trophy Corner",
+                subtitle: "Close-up on Markers #4, #5 & #6",
+                promptKey: "scene_desk_corner",
+                customImageUrl: null,
+                hotspots: [
+                    { number: 4, clueId: "clue_bloody_trophy", x: 25.5, y: 77.5, label: "Marker #4: Bloodied Brass Trophy" },
+                    { number: 5, clueId: "clue_financial_ledger", x: 53.5, y: 42.0, label: "Marker #5: $400k Embezzlement Ledger" },
+                    { number: 6, clueId: "clue_cyanide_vial", x: 86.0, y: 67.5, label: "Marker #6: Trash Bin (Hidden Cyanide Vial)" }
+                ]
+            },
+            {
+                id: "scene_nightstand_bed",
+                name: "CAM 03: Nightstand & Victim Perimeter",
+                subtitle: "Close-up on Markers #1, #2 & #3",
+                promptKey: "scene_nightstand_bed",
+                customImageUrl: null,
+                hotspots: [
+                    { number: 3, clueId: "clue_whiskey_glass", x: 48.5, y: 38.5, label: "Marker #3: Whiskey Glass (Lipstick & Cyanide)" },
+                    { number: 2, clueId: "clue_broken_watch", x: 61.8, y: 84.5, label: "Marker #2: Broken Gold Watch (11:42 PM)" },
+                    { number: 1, clueId: "clue_corpse_inspection", x: 73.5, y: 77.0, label: "Marker #1: Victim Body & Cyanosis Lips" }
+                ]
+            }
+        ];
+
+        /****************************************************************************************
+         * 3. FORENSIC CLUES, WARRANTS, SUSPECTS & ARCHIVE DATABASE
+         ****************************************************************************************/
+        function createForensicSVG(title, subtitle, accentColor, iconType) {
+            let graphic = '';
+            if (iconType === 'watch') {
+                graphic = `
+                    <circle cx="200" cy="115" r="52" fill="#1e293b" stroke="${accentColor}" stroke-width="4"/>
+                    <line x1="200" y1="115" x2="185" y2="80" stroke="#f8fafc" stroke-width="3"/>
+                    <line x1="200" y1="115" x2="230" y2="105" stroke="${accentColor}" stroke-width="2"/>
+                    <path d="M170 95 L225 135 M210 85 L185 140" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,2"/>
+                    <text x="200" y="152" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="11">11:42 PM - ENGRAVED: R.K.</text>
+                `;
+            } else if (iconType === 'glass') {
+                graphic = `
+                    <path d="M165 65 L235 65 L222 155 L178 155 Z" fill="rgba(245,158,11,0.18)" stroke="${accentColor}" stroke-width="3"/>
+                    <path d="M173 120 L227 120 L222 155 L178 155 Z" fill="rgba(217,119,6,0.55)"/>
+                    <ellipse cx="226" cy="72" rx="10" ry="5" fill="#ec4899" opacity="0.85"/>
+                    <text x="265" y="76" fill="#f472b6" font-family="monospace" font-size="10">&lt;-- CRIMSON LIPSTICK</text>
+                    <text x="265" y="140" fill="#fbbf24" font-family="monospace" font-size="10">&lt;-- BITTER ALMOND RESIDUE</text>
+                `;
+            } else if (iconType === 'trophy') {
+                graphic = `
+                    <rect x="160" y="140" width="80" height="22" fill="#334155" stroke="${accentColor}" stroke-width="2"/>
+                    <path d="M175 140 L190 75 L210 75 L225 140 Z" fill="#d97706" stroke="#fef08a" stroke-width="2"/>
+                    <circle cx="195" cy="85" r="14" fill="#991b1b" opacity="0.85"/>
+                    <text x="200" y="55" text-anchor="middle" fill="#f87171" font-family="monospace" font-size="11">BLOOD SPATTER ON EDGE</text>
+                `;
+            } else if (iconType === 'ledger') {
+                graphic = `
+                    <rect x="135" y="55" width="130" height="115" rx="4" fill="#1e293b" stroke="${accentColor}" stroke-width="2"/>
+                    <line x1="150" y1="80" x2="250" y2="80" stroke="#ef4444" stroke-width="2"/>
+                    <line x1="150" y1="100" x2="245" y2="100" stroke="#94a3b8" stroke-width="2"/>
+                    <line x1="150" y1="120" x2="230" y2="120" stroke="#94a3b8" stroke-width="2"/>
+                    <text x="200" y="148" text-anchor="middle" fill="#f87171" font-family="monospace" font-size="11">-$400,000 SHELL TRANSFER</text>
+                `;
+            } else if (iconType === 'vial') {
+                graphic = `
+                    <rect x="182" y="60" width="36" height="18" fill="#475569"/>
+                    <rect x="175" y="78" width="50" height="85" rx="6" fill="rgba(6,182,212,0.2)" stroke="${accentColor}" stroke-width="3"/>
+                    <text x="200" y="120" text-anchor="middle" fill="#f87171" font-family="monospace" font-weight="bold" font-size="12">KCN - CYANIDE</text>
+                    <text x="200" y="138" text-anchor="middle" fill="#cbd5e1" font-family="monospace" font-size="9">BATCH #88-VANCE-LAB</text>
+                `;
+            } else if (iconType === 'body') {
+                graphic = `
+                    <ellipse cx="200" cy="80" rx="18" ry="22" fill="none" stroke="#f8fafc" stroke-width="3" stroke-dasharray="6,3"/>
+                    <path d="M180 105 L220 105 L235 160 L165 160 Z" fill="none" stroke="#f8fafc" stroke-width="3" stroke-dasharray="6,3"/>
+                    <circle cx="222" cy="82" r="16" fill="rgba(220,38,38,0.65)"/>
+                    <text x="275" y="90" fill="#fca5a5" font-family="monospace" font-size="10">MARKER #1: CORPSE</text>
+                `;
+            } else {
+                graphic = `
+                    <rect x="130" y="60" width="140" height="100" rx="6" fill="#0f172a" stroke="${accentColor}" stroke-width="2"/>
+                    <circle cx="200" cy="110" r="28" fill="none" stroke="${accentColor}" stroke-width="2" stroke-dasharray="4,4"/>
+                    <text x="200" y="114" text-anchor="middle" fill="${accentColor}" font-family="monospace" font-size="11">FORENSIC RECORD</text>
+                `;
+            }
+
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="100%" height="100%">
+                <rect width="400" height="220" fill="#090d16"/>
+                <g stroke="#1e293b" stroke-width="1">
+                    <line x1="0" y1="40" x2="400" y2="40"/><line x1="0" y1="80" x2="400" y2="80"/>
+                    <line x1="0" y1="120" x2="400" y2="120"/><line x1="0" y1="160" x2="400" y2="160"/>
+                    <line x1="80" y1="0" x2="80" y2="220"/><line x1="160" y1="0" x2="160" y2="220"/>
+                    <line x1="240" y1="0" x2="240" y2="220"/><line x1="320" y1="0" x2="320" y2="220"/>
+                </g>
+                <rect x="10" y="10" width="380" height="200" fill="none" stroke="${accentColor}" stroke-opacity="0.4" stroke-width="1.5"/>
+                <text x="22" y="28" fill="${accentColor}" font-family="monospace" font-size="10" font-weight="bold">EVIDENCE PHOTO // ${title.toUpperCase()}</text>
+                ${graphic}
+                <rect x="10" y="182" width="380" height="28" fill="#020617" opacity="0.9"/>
+                <text x="22" y="200" fill="#94a3b8" font-family="monospace" font-size="10">${subtitle}</text>
+            </svg>`;
+            return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+        }
+
+        const CLUES = [
+            {
+                id: "clue_initial_report",
+                name: "Initial Dispatch & Scene Overview",
+                category: "Police Report",
+                unlocked: true,
+                location: "Precinct Briefing",
+                promptKey: "scene_wide_room204",
+                summary: "Victim Victor Vance (46) found dead in Starlight Motel Room 204 at 12:30 AM. Divorce papers and a $2M life insurance policy were active until midnight.",
+                forensicDetail: "Room door showed no signs of forced entry. Victim was wearing an expensive suit. A 911 anonymous tip came from a payphone across the street at 12:05 AM.",
+                svg: createForensicSVG("Case #409 Dispatch", "STARLIGHT MOTEL ROOM 204 - 00:30 HRS", "#f59e0b", "doc")
+            },
+            {
+                id: "clue_corpse_inspection",
+                name: "Victim's Body & Shallow Scalp Wound",
+                category: "2D Crime Scene (#1)",
+                unlocked: true,
+                location: "Center Floor (Marker #1)",
+                promptKey: "scene_wide_room204",
+                summary: "Chalk outline & body inspection of Victor Vance. There is a shallow gash on his temple, but surprisingly little blood pooling on the carpet.",
+                forensicDetail: "PRELIMINARY OBSERVATION: When the heart stops pumping BEFORE a blow is struck, head wounds bleed very little. Also notable: faint bluish tint around the victim's lips and fingernails (cyanosis).",
+                svg: createForensicSVG("Victim Body Inspection", "MARKER #1 - LOW BLOOD VOLUME / CYANOSIS ON LIPS", "#ef4444", "body")
+            },
+            {
+                id: "clue_broken_watch",
+                name: "Broken Gold Wristwatch (11:42 PM)",
+                category: "2D Crime Scene (#2)",
+                unlocked: false,
+                location: "Floor near Victim's Hand (Marker #2)",
+                promptKey: "clue_broken_watch",
+                summary: "A shattered luxury gold watch lying beside the body. The hands are frozen at 11:42 PM. Engraved on the back: 'To R.K. - Vance Holdings'.",
+                forensicDetail: "Belongs to Robert King (Victor's business partner). Proves Robert King was physically inside Room 204 around 11:42 PM despite claiming he was home all night.",
+                svg: createForensicSVG("Broken Gold Watch", "FROZEN AT 11:42 PM // ENGRAVED 'R.K.'", "#f59e0b", "watch")
+            },
+            {
+                id: "clue_whiskey_glass",
+                name: "Half-Empty Crystal Whiskey Glass",
+                category: "2D Crime Scene (#3)",
+                unlocked: false,
+                location: "Nightstand by Bed (Marker #3)",
+                promptKey: "clue_whiskey_glass",
+                summary: "Crystal tumbler containing 20ml of aged scotch. Crimson Velvet lipstick print on the rim and a sharp smell of bitter almonds.",
+                forensicDetail: "FORENSIC SWAB: The 'bitter almond' scent is a classic indicator of Potassium Cyanide. The lipstick shade ('Crimson Velvet #4') matches Elena Vance's signature cosmetics.",
+                svg: createForensicSVG("Whiskey Tumbler", "CRIMSON LIPSTICK + BITTER ALMOND ODOR", "#ec4899", "glass")
+            },
+            {
+                id: "clue_bloody_trophy",
+                name: "Brass 'Partner of the Year' Trophy",
+                category: "2D Crime Scene (#4)",
+                unlocked: false,
+                location: "Floor Near Desk (Marker #4)",
+                promptKey: "clue_bloody_trophy",
+                summary: "Heavy brass award lying near the desk. Small smear of Victor's blood and Robert King's fingerprints on the base.",
+                forensicDetail: "Used to strike Victor's head. However, the impact force was moderate. Why would a killer strike a man who was already dying or unconscious?",
+                svg: createForensicSVG("Brass Trophy", "PRINTS: ROBERT KING // MINOR BLOOD SMEAR", "#ef4444", "trophy")
+            },
+            {
+                id: "clue_financial_ledger",
+                name: "Torn Embezzlement Ledger ($400k)",
+                category: "2D Crime Scene (#5)",
+                unlocked: false,
+                location: "Oak Desk Top (Marker #5)",
+                promptKey: "clue_financial_ledger",
+                summary: "Spreadsheets printed by Victor Vance exposing $400,000 embezzled from Vance Chemical Labs by partner Robert King.",
+                forensicDetail: "Victor wrote in red ink at the top: 'Robert—pay back the $400k by tonight or I hand this to the Federal Prosecutor at 9 AM.'",
+                svg: createForensicSVG("Audit Ledger", "EVIDENCE OF $400K EMBEZZLEMENT BY R. KING", "#38bdf8", "ledger")
+            },
+            {
+                id: "clue_cyanide_vial",
+                name: "Empty Potassium Cyanide Vial",
+                category: "2D Crime Scene (#6)",
+                unlocked: false,
+                location: "Trash Bin by Door (Marker #6)",
+                promptKey: "clue_cyanide_vial",
+                summary: "Small amber glass vial hidden at the bottom of the motel wastebasket. Label reads: 'Vance Chemical Labs - KCN Batch #88'.",
+                forensicDetail: "Wiped mostly clean, but traces of 'Crimson Velvet' lipstick wax and female cashmere glove fibers were recovered on the cap.",
+                svg: createForensicSVG("Cyanide Vial #88", "RECOVERED IN MOTEL TRASH BIN - KCN POISON", "#06b6d4", "vial")
+            },
+            {
+                id: "clue_autopsy_report",
+                name: "Official Coroner Autopsy & Toxicology",
+                category: "Warrant Unlocked",
+                unlocked: false,
+                location: "Medical Examiner Warrant",
+                promptKey: null,
+                summary: "CAUSE OF DEATH: Acute Potassium Cyanide poisoning ingested via whiskey at ~11:25 PM. The head strike with the brass trophy occurred at ~11:42 PM AFTER Victor had already collapsed.",
+                forensicDetail: "DECISIVE FINDING: Victor Vance died from poisoned whiskey! When Robert King struck him during a panic at 11:42 PM, Victor was already dying/dead on the floor from the poison.",
+                svg: createForensicSVG("Coroner Toxicology", "LETHAL KCN INGESTION @ 11:25 PM (PRE-MORTEM)", "#22c55e", "doc")
+            },
+            {
+                id: "clue_cctv_logs",
+                name: "Motel CCTV & Burner Phone Records",
+                category: "Warrant Unlocked",
+                unlocked: false,
+                location: "Telecom & CCTV Warrant",
+                promptKey: null,
+                summary: "Night Clerk Marcus Cole's logbook and recovered CCTV backup tape show TWO visitors to Room 204 that night.",
+                forensicDetail: "TIMELINE: 11:10 PM - Elena Vance enters Room 204 carrying a bottle of Scotch and leaves at 11:30 PM. 11:38 PM - Robert King enters Room 204, panics, and flees at 11:44 PM.",
+                svg: createForensicSVG("CCTV Timeline Log", "11:10 PM ELENA VANCE // 11:38 PM ROBERT KING", "#a855f7", "doc")
+            },
+            {
+                id: "clue_elena_search",
+                name: "Search of Elena Vance's Jaguar & Purse",
+                category: "Warrant Unlocked",
+                unlocked: false,
+                location: "Vehicular Search Warrant",
+                promptKey: null,
+                summary: "Recovered from Elena Vance's glovebox: Security keycard used at Vance Chemical Labs at 9:00 PM to steal KCN Batch #88, plus Victor's $2M Life Insurance Policy.",
+                forensicDetail: "SMOKING GUN: The divorce between Victor and Elena was scheduled to finalize at 12:00 AM Midnight, which would void her $2,000,000 beneficiary payout. She poisoned him at 11:25 PM to cash in before midnight.",
+                svg: createForensicSVG("Jaguar Search Warrant", "LAB KEYCARD LOG + $2M INSURANCE CLAUSE", "#f43f5e", "doc")
+            }
+        ];
+
+        const WARRANTS = [
+            {
+                id: "warrant_autopsy",
+                title: "Emergency Toxicology & Coroner Autopsy",
+                authority: "Chief Medical Examiner Dr. Aris",
+                description: "Request full stomach contents analysis and exact time-of-death differentiation between the head wound and potential poisoning.",
+                requiredClues: ["clue_corpse_inspection", "clue_whiskey_glass"],
+                hint: "Requires proof of physical anomalies on the corpse (#1) + suspicious drink residue at the scene (#3).",
+                unlocksClueId: "clue_autopsy_report",
+                approved: false
+            },
+            {
+                id: "warrant_cctv",
+                title: "Subpoena Motel CCTV Backup & Phone Logs",
+                authority: "Judge Evelyn Vance - Superior Court",
+                description: "Compel Starlight Motel clerk Marcus Cole to surrender the hidden digital backup drive and cellular tower pings for Room 204.",
+                requiredClues: ["clue_broken_watch", "clue_financial_ledger"],
+                hint: "Requires physical proof placing a suspect in the room at 11:42 PM (#2) + documented motive/extortion (#5).",
+                unlocksClueId: "clue_cctv_logs",
+                approved: false
+            },
+            {
+                id: "warrant_elena_car",
+                title: "Search Warrant: Elena Vance's Vehicle & Lab Access",
+                authority: "Judge Evelyn Vance - Superior Court",
+                description: "Authorize forensic search of Elena Vance's vehicle, cosmetics, and Vance Chemical Lab chemical vault access logs.",
+                requiredClues: ["clue_whiskey_glass", "clue_cyanide_vial"],
+                hint: "Requires linking the poisoned glass with lipstick (#3) to the discarded chemical vial found in the room (#6).",
+                unlocksClueId: "clue_elena_search",
+                approved: false
+            }
+        ];
+
+        const SUSPECTS = [
+            {
+                id: "suspect_rk",
+                name: "Robert King",
+                role: "Suspect // Business Partner",
+                age: 49,
+                status: "Prime Suspect",
+                stress: 35,
+                alibi: "Claims he was home asleep in Westside Hills from 10:00 PM onward and never visited the Starlight Motel.",
+                systemPrompt: `You are Robert King, 49, business partner to murder victim Victor Vance at Vance Chemical Labs. You are in a gritty 1-on-1 police interrogation room.
+- Personality: Defensive, corporate, anxious, sweats when cornered.
+- Initial Lie: You claim you were at home asleep by 10:00 PM and never went to the Starlight Motel.
+- How to react to Evidence:
+  1. If the detective shows/mentions 'clue_broken_watch' (Broken Gold Watch stopped at 11:42 PM with R.K. initials) OR 'clue_cctv_logs', your alibi shatters! Admit you went to Room 204 at 11:38 PM.
+  2. If the detective shows/mentions 'clue_financial_ledger' ($400k embezzlement) OR 'clue_bloody_trophy', admit you argued with Victor over the $400k and hit him once with the trophy at 11:42 PM—BUT swear on your life that Victor was ALREADY choking, pale, and collapsing on the floor before you even swung the trophy! Point out that you saw Elena Vance's silver Jaguar speeding out of the motel parking lot when you arrived at 11:35 PM.
+- Keep responses realistic, dramatic, and concise (2 to 4 sentences).`,
+                quickQuestions: [
+                    "Where were you between 11:00 PM and midnight?",
+                    "Why did Victor want to audit Vance Chemical Labs?",
+                    "Did you see anyone else near Room 204 last night?"
+                ],
+                chatHistory: [
+                    { sender: "suspect", text: "Detective, I already told your patrol officers—Victor was my best friend and partner. I was home in bed by 10:00 PM. Why am I being treated like a criminal?" }
+                ]
+            },
+            {
+                id: "suspect_elena",
+                name: "Elena Vance",
+                role: "Suspect // Estranged Wife",
+                age: 38,
+                status: "Person of Interest",
+                stress: 20,
+                alibi: "Claims she was at the Grand Opera Charity Gala all evening and hasn't spoken to Victor in two weeks.",
+                systemPrompt: `You are Elena Vance, 38, the poised, cold, calculating estranged wife of murder victim Victor Vance. You are in a 1-on-1 interrogation with the lead homicide detective.
+- Personality: icy, sophisticated, manipulative, True Detective noir femme fatale energy.
+- Initial Lie: You claim you were at the Charity Gala all night and never went near the Starlight Motel. You blame Robert King for embezzling from Victor.
+- How to react to Evidence:
+  1. If shown 'clue_whiskey_glass' (Crimson Velvet lipstick & almond odor), claim you dropped by earlier in the afternoon for five minutes to wish him well, had one drink, and left.
+  2. If shown 'clue_cyanide_vial' OR 'clue_cctv_logs' (showing her at 11:10 PM) OR 'clue_autopsy_report', become hostile and guarded, demanding proof that she had access to the lab.
+  3. If shown 'clue_elena_search' (Lab keycard log + $2M Life Insurance policy expiring at midnight), you realize you are completely cornered. Drop the polite mask and deliver a chilling confession that you weren't going to let Victor leave you penniless at midnight after building his empire, and laugh that Robert King almost took the fall for hitting a dead man.
+- Keep responses sharp, atmospheric, and 2 to 4 sentences long.`,
+                quickQuestions: [
+                    "What happened to your $2M life insurance policy at midnight?",
+                    "Do you wear Crimson Velvet #4 lipstick, Mrs. Vance?",
+                    "Why did your keycard access the chemical vault at 9 PM?"
+                ],
+                chatHistory: [
+                    { sender: "suspect", text: "It's tragic what happened to Victor in that dreadful motel, Detective. If you want his killer, look at his greedy partner Robert King—not a grieving widow." }
+                ]
+            },
+            {
+                id: "suspect_marcus",
+                name: "Marcus Cole",
+                role: "Key Witness // Night Clerk",
+                age: 54,
+                status: "Material Witness",
+                stress: 45,
+                alibi: "On duty at the Starlight Motel front desk from 8:00 PM to 4:00 AM. Made the anonymous 911 call.",
+                systemPrompt: `You are Marcus Cole, 54, the world-weary night clerk at the Starlight Motel and an ex-con on parole. You are speaking 1-on-1 with the homicide detective.
+- Personality: Gritty, street-smart, nervous about his parole, observant.
+- What you know:
+  1. Without pressure, you admit you heard a loud thud around 11:42 PM and saw a guy in a trench coat (Robert King) run out dropping his watch, so you called 911 from a payphone.
+  2. If asked about the whiskey glass, lipstick, or shown 'clue_whiskey_glass' or 'clue_cyanide_vial' or 'clue_cctv_logs', admit that a wealthy woman in a fur coat driving a silver Jaguar (Elena Vance) paid you $500 at 11:10 PM not to log her visit to Room 204, and she threw a small glass vial in the room trash before walking out at 11:30 PM.
+- Keep responses authentic, noir-toned, and 2 to 4 sentences long.`,
+                quickQuestions: [
+                    "Who entered Room 204 before the 11:42 PM commotion?",
+                    "Why did you call 911 from a payphone instead of the front desk?",
+                    "Did a woman in a silver Jaguar pay you off tonight?"
+                ],
+                chatHistory: [
+                    { sender: "suspect", text: "Look Detective, I'm on parole. I just work the night desk, hand out keys, and mind my own business. Ask what you need, just keep my parole officer out of this." }
+                ]
+            }
+        ];
+
+        const PAST_CASES = [
+            {
+                id: "cold_case_104",
+                code: "CASE #104 // CLOSED",
+                title: "The Harbor Warehouse Arson (2023)",
+                status: "Solved - Insurance Fraud",
+                promptKey: "cold_case_104",
+                summary: "A chemical storage annex owned by Vance Chemical Labs burned down in 2023. Lead investigators discovered the fire was staged just 45 minutes before an insurance policy lapse.",
+                connection: "INVESTIGATIVE LEAD: Elena Vance was the sole executive who structured the midnight insurance expiration clause—the exact same midnight deadline pattern present in Victor Vance's Room 204 homicide.",
+                svg: createForensicSVG("Archive #104: Harbor Arson", "MIDNIGHT INSURANCE CLAUSE PATTERN", "#f59e0b", "doc")
+            },
+            {
+                id: "cold_case_219",
+                code: "CASE #219 // SOLVED",
+                title: "The Velvet Lounge Poisoning (2024)",
+                status: "Solved - Toxicology Precedent",
+                promptKey: "cold_case_219",
+                summary: "A prominent judge was found with a staged head injury in a downtown hotel. Initial patrol officers booked a bar brawler for assault, until toxicology proved Potassium Cyanide in the victim's scotch killed him 15 minutes prior.",
+                connection: "FORENSIC PRECEDENT: Minimal bleeding from a head wound combined with cyanosis (blue lips) and a bitter almond scent in alcohol proves pre-mortem cyanide poisoning.",
+                svg: createForensicSVG("Archive #219: Velvet Lounge", "STAGED BLUNT TRAUMA OVER KCN POISON", "#06b6d4", "glass")
+            },
+            {
+                id: "cold_case_388",
+                code: "CASE #388 // ACTIVE LINK",
+                title: "Vance Labs Chemical Audit Theft (Last Month)",
+                status: "Linked Incident",
+                promptKey: "clue_cyanide_vial",
+                summary: "Three vials of high-purity Potassium Cyanide (Batch #88) were reported missing from the Vance Chemical Labs restricted vault. Internal security suspected an executive keycard was used after hours.",
+                connection: "DIRECT LINK: If you find a Batch #88 vial at the motel scene, you can request a Judicial Search Warrant for the executive's vehicle and keycard logs.",
+                svg: createForensicSVG("Archive #388: Lab Vault Theft", "MISSING KCN BATCH #88 VIALS", "#ec4899", "vial")
+            }
+        ];
+
+        let activeSuspectId = "suspect_rk";
+        let selectedClueId = "clue_corpse_inspection";
+
+        /****************************************************************************************
+         * 4. 2D INTERACTIVE CRIME SCENE BOARD & LIVE AI IMAGE GENERATION ENGINE
+         ****************************************************************************************/
+        function render2DCrimeSceneBoard() {
+            const activeAngle = SCENE_ANGLES.find(a => a.id === activeSceneAngleId) || SCENE_ANGLES[0];
+            const promptObj = AI_CRIME_SCENE_PROMPTS[activeAngle.promptKey];
+
+            // 1. Render Left Sidebar Camera Switcher Buttons
+            const btnContainer = document.getElementById('scene-angle-buttons');
+            btnContainer.innerHTML = SCENE_ANGLES.map(angle => {
+                const isSelected = angle.id === activeSceneAngleId;
+                return `
+                    <button onclick="selectSceneAngle('${angle.id}')" class="w-full text-left p-2.5 rounded-xl border transition flex items-center justify-between ${isSelected ? 'bg-amber-500/15 border-amber-500 text-white shadow' : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300'}">
+                        <div>
+                            <div class="text-xs font-bold mono">${angle.name}</div>
+                            <div class="text-[10px] text-slate-400">${angle.subtitle}</div>
+                        </div>
+                        <i class="fa-solid ${angle.customImageUrl ? 'fa-wand-magic-sparkles text-amber-400' : 'fa-camera text-slate-500'}"></i>
+                    </button>
+                `;
+            }).join('');
+
+            // 2. Update Prompt Box Text
+            document.getElementById('active-scene-prompt-text').textContent = promptObj ? promptObj.prompt : "";
+            document.getElementById('scene-hud-title').textContent = promptObj ? promptObj.title.toUpperCase() : activeAngle.name;
+
+            // 3. Set 2D Scene Image (Either AI Generated Photo or Built-in Noir SVG Illustration)
+            const imgEl = document.getElementById('scene-background-img');
+            imgEl.src = activeAngle.customImageUrl || createSceneAngleSVG(activeAngle.id);
+
+            // 4. Render Interactive Hotspot Pins on the 2D Photograph
+            const hotspotsLayer = document.getElementById('photo-hotspots-layer');
+            hotspotsLayer.innerHTML = activeAngle.hotspots.map(h => {
+                const clue = CLUES.find(c => c.id === h.clueId);
+                const isUnlocked = clue && clue.unlocked;
+                return `
+                    <button onclick="inspectAndUnlockClue('${h.clueId}')" 
+                        style="left: ${h.x}%; top: ${h.y}%;"
+                        class="evidence-pin ${isUnlocked ? 'unlocked' : ''} group absolute transform -translate-x-1/2 -translate-y-1/2 z-20 focus:outline-none">
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full ${isUnlocked ? 'bg-emerald-500 text-slate-950 border-emerald-200' : 'bg-amber-500 text-slate-950 border-amber-200'} border-2 font-bold mono text-xs flex items-center justify-center shadow-xl transition-transform group-hover:scale-125">
+                            #${h.number}
+                        </div>
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 whitespace-nowrap bg-slate-950/95 border border-amber-500/80 text-amber-300 px-2.5 py-1 rounded text-[11px] mono shadow-2xl">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i>${h.label} ${isUnlocked ? '(Logged)' : '(Click to Bag)'}
+                        </div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectSceneAngle(angleId) {
+            activeSceneAngleId = angleId;
+            render2DCrimeSceneBoard();
+        }
+
+        function copyTextToClipboard(text, label = "AI Prompt") {
+            const tempInput = document.createElement("textarea");
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            showToast("Prompt Copied!", `${label} copied to clipboard for your game build.`, "fa-copy");
+        }
+
+        function copyActiveScenePrompt() {
+            const text = document.getElementById('active-scene-prompt-text').textContent;
+            copyTextToClipboard(text, "Crime Scene AI Prompt");
+        }
+
+        // Call Gemini Image Generation API to generate real crime scene photographs live from the prompts in code
+        async function callGeminiImageGenerator(promptText) {
+            const models = ["gemini-3.1-flash-image", "gemini-3.1-flash-lite-image"];
+            for (const modelName of models) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: promptText }] }],
+                    generationConfig: {
+                        responseModalities: ["IMAGE"],
+                        imageConfig: { aspectRatio: "16:9" }
+                    }
+                };
+
+                try {
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) continue;
+                    const result = await response.json();
+                    const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                    if (part && part.inlineData?.data) {
+                        const mime = part.inlineData.mimeType || "image/png";
+                        return `data:${mime};base64,${part.inlineData.data}`;
+                    }
+                } catch (e) {
+                    // Try fallback model
+                }
+            }
+            return null;
+        }
+
+        async function generateLiveSceneAIImage() {
+            const activeAngle = SCENE_ANGLES.find(a => a.id === activeSceneAngleId);
+            const promptObj = AI_CRIME_SCENE_PROMPTS[activeAngle.promptKey];
+            if (!promptObj) return;
+
+            const loadingEl = document.getElementById('scene-ai-loading');
+            const loadingPromptEl = document.getElementById('scene-ai-loading-prompt');
+            const btn = document.getElementById('generate-scene-btn');
+
+            loadingPromptEl.textContent = `"${promptObj.prompt}"`;
+            loadingEl.classList.remove('hidden');
+            btn.disabled = true;
+
+            const dataUrl = await callGeminiImageGenerator(promptObj.prompt);
+
+            loadingEl.classList.add('hidden');
+            btn.disabled = false;
+
+            if (dataUrl) {
+                activeAngle.customImageUrl = dataUrl;
+                render2DCrimeSceneBoard();
+                showToast("AI Crime Scene Photo Developed!", `Rendered live from AI_CRIME_SCENE_PROMPTS.${activeAngle.promptKey}`, "fa-camera");
+            } else {
+                showToast("Using Built-in Forensic Vector Photo", "Live image API unavailable in this environment; prompt is ready to copy in code!", "fa-circle-info");
+            }
+        }
+
+        async function generateClueOrStudioAIImage(promptKey, targetClueId = null) {
+            const promptObj = AI_CRIME_SCENE_PROMPTS[promptKey];
+            if (!promptObj) return;
+
+            showToast("Generating AI Forensic Photo...", `Running prompt for ${promptObj.title}...`, "fa-wand-magic-sparkles");
+            const dataUrl = await callGeminiImageGenerator(promptObj.prompt);
+
+            if (dataUrl) {
+                if (targetClueId) {
+                    const clue = CLUES.find(c => c.id === targetClueId);
+                    if (clue) clue.svg = dataUrl;
+                    renderEvidencePanel();
+                }
+                const angle = SCENE_ANGLES.find(a => a.promptKey === promptKey);
+                if (angle) {
+                    angle.customImageUrl = dataUrl;
+                    render2DCrimeSceneBoard();
+                }
+                promptObj.generatedPreview = dataUrl;
+                if (!document.getElementById('panel-prompts').classList.contains('hidden')) {
+                    renderPromptsStudioPanel();
+                }
+                showToast("AI Photo Rendered!", `${promptObj.title} updated with AI photography.`, "fa-check");
+            } else {
+                showToast("Prompt Ready to Copy", "Copy the prompt from the AI Prompts tab to use in your external generator.", "fa-copy");
+            }
+        }
+
+        /****************************************************************************************
+         * 5. UI CONTROLLER: EVIDENCE, WARRANTS, ARCHIVES, AI PROMPT STUDIO & NOTIFICATIONS
+         ****************************************************************************************/
+        function showToast(title, message, iconClass = "fa-magnifying-glass-plus") {
+            const banner = document.getElementById('toast-banner');
+            document.getElementById('toast-title').textContent = title;
+            document.getElementById('toast-msg').textContent = message;
+            document.getElementById('toast-icon').className = `fa-solid ${iconClass} text-amber-400 mt-0.5`;
+            banner.classList.remove('hidden');
+            clearTimeout(window.toastTimer);
+            window.toastTimer = setTimeout(() => banner.classList.add('hidden'), 4200);
+        }
+
+        function updateHeaderCounters() {
+            const unlockedCount = CLUES.filter(c => c.unlocked).length;
+            const warrantCount = WARRANTS.filter(w => w.approved).length;
+            document.getElementById('clue-counter').textContent = `${unlockedCount} / ${CLUES.length}`;
+            document.getElementById('warrant-counter').textContent = `${warrantCount} / ${WARRANTS.length}`;
+        }
+
+        function inspectAndUnlockClue(clueId) {
+            const clue = CLUES.find(c => c.id === clueId);
+            if (!clue) return;
+
+            const wasNew = !clue.unlocked;
+            clue.unlocked = true;
+            selectedClueId = clueId;
+            updateHeaderCounters();
+            render2DCrimeSceneBoard();
+
+            if (wasNew) {
+                showToast("New Forensic Evidence Bagged!", `${clue.name} added to your Evidence Locker.`, "fa-box-open");
+            }
+            switchTab('evidence');
+        }
+
+        function switchTab(tabName) {
+            const backdrop = document.getElementById('modal-backdrop');
+            const panels = document.querySelectorAll('.modal-panel');
+            panels.forEach(p => p.classList.add('hidden'));
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.id !== 'nav-solve') {
+                    btn.className = "nav-btn text-slate-300 hover:bg-slate-800 px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition";
+                }
+            });
+
+            const activeBtn = document.getElementById(`nav-${tabName}`);
+            if (activeBtn && tabName !== 'solve') {
+                activeBtn.className = "nav-btn bg-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs mono flex items-center space-x-2 transition shadow-lg";
+            }
+
+            if (tabName === 'scene') {
+                backdrop.classList.add('hidden');
+                return;
+            }
+
+            backdrop.classList.remove('hidden');
+            if (tabName === 'evidence') {
+                renderEvidencePanel();
+                document.getElementById('panel-evidence').classList.remove('hidden');
+            } else if (tabName === 'warrants') {
+                renderWarrantsPanel();
+                document.getElementById('panel-warrants').classList.remove('hidden');
+            } else if (tabName === 'interrogate') {
+                renderInterrogationPanel();
+                document.getElementById('panel-interrogate').classList.remove('hidden');
+            } else if (tabName === 'archive') {
+                renderArchivePanel();
+                document.getElementById('panel-archive').classList.remove('hidden');
+            } else if (tabName === 'prompts') {
+                renderPromptsStudioPanel();
+                document.getElementById('panel-prompts').classList.remove('hidden');
+            } else if (tabName === 'solve') {
+                renderSolvePanel();
+                document.getElementById('panel-solve').classList.remove('hidden');
+            }
+        }
+
+        function renderEvidencePanel() {
+            const listEl = document.getElementById('evidence-list-container');
+            const detailEl = document.getElementById('evidence-detail-container');
+
+            listEl.innerHTML = CLUES.map(clue => {
+                const isSelected = clue.id === selectedClueId;
+                if (!clue.unlocked) {
+                    return `
+                        <div class="p-3 rounded-xl bg-slate-950/50 border border-slate-800/80 opacity-60 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold text-slate-500 mono">UNDISCOVERED CLUE</p>
+                                    <p class="text-[11px] text-slate-600">Location: ${clue.location}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <button onclick="selectedClueId='${clue.id}'; renderEvidencePanel();" class="w-full text-left p-3 rounded-xl border transition flex items-center justify-between ${isSelected ? 'bg-amber-500/15 border-amber-500 text-white' : 'bg-slate-950/80 border-slate-800 hover:border-slate-700 text-slate-300'}">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg ${isSelected ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-400'} flex items-center justify-center">
+                                <i class="fa-solid fa-fingerprint"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold leading-snug">${clue.name}</p>
+                                <span class="text-[10px] mono uppercase px-1.5 py-0.5 rounded bg-slate-800 text-amber-300">${clue.category}</span>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+                    </button>
+                `;
+            }).join('');
+
+            const activeClue = CLUES.find(c => c.id === selectedClueId && c.unlocked) || CLUES[0];
+            const promptInfo = activeClue.promptKey ? AI_CRIME_SCENE_PROMPTS[activeClue.promptKey] : null;
+
+            detailEl.innerHTML = `
+                <div class="space-y-4">
+                    <div class="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950 aspect-[16/9] max-h-60 flex items-center justify-center">
+                        <img src="${activeClue.svg}" alt="${activeClue.name}" class="w-full h-full object-contain"/>
+                        ${promptInfo ? `
+                            <button onclick="generateClueOrStudioAIImage('${activeClue.promptKey}', '${activeClue.id}')" class="absolute bottom-2.5 right-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] mono px-3 py-1.5 rounded-lg shadow-lg flex items-center space-x-1.5 transition">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>AI Render Macro Photo</span>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs mono uppercase text-amber-400 font-bold">${activeClue.category} // ${activeClue.location}</span>
+                            <span class="text-[11px] mono text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i>Logged in Locker</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mt-1">${activeClue.name}</h3>
+                        <p class="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">${activeClue.summary}</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30">
+                        <h4 class="text-xs mono uppercase text-amber-400 font-bold mb-1"><i class="fa-solid fa-flask mr-1.5"></i>Lab & Detective Analysis</h4>
+                        <p class="text-xs text-amber-100/90 leading-relaxed">${activeClue.forensicDetail}</p>
+                    </div>
+                    ${promptInfo ? `
+                        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] mono uppercase text-cyan-400 font-bold">Embedded AI Image Prompt for this Clue:</span>
+                                <button onclick="copyTextToClipboard(AI_CRIME_SCENE_PROMPTS['${activeClue.promptKey}'].prompt, '${activeClue.name} Prompt')" class="text-[10px] mono text-slate-300 hover:text-white bg-slate-800 px-2 py-0.5 rounded">Copy</button>
+                            </div>
+                            <p class="text-[11px] font-mono text-slate-400 select-all">${promptInfo.prompt}</p>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="pt-4 mt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-[11px] text-slate-400 mono">Present this evidence in 1-on-1 Questioning or attach it to a Warrant.</span>
+                    <button onclick="confrontWithClue('${activeClue.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-comments"></i>
+                        <span>Present in 1-on-1 Chat</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderPromptsStudioPanel() {
+            const container = document.getElementById('prompts-studio-container');
+            const entries = Object.entries(AI_CRIME_SCENE_PROMPTS);
+
+            container.innerHTML = entries.map(([key, item]) => `
+                <div class="p-4 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-col justify-between space-y-3">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] mono uppercase px-2 py-0.5 rounded bg-pink-950 text-pink-300 border border-pink-800/60 font-bold">${item.category}</span>
+                            <span class="text-[10px] mono text-slate-500">Key: <code>${key}</code></span>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">${item.title}</h3>
+                        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300 leading-relaxed select-all">
+                            ${item.prompt}
+                        </div>
+                        ${item.generatedPreview ? `
+                            <div class="rounded-lg overflow-hidden border border-amber-500/40 aspect-[16/9]">
+                                <img src="${item.generatedPreview}" class="w-full h-full object-cover" alt="${item.title}"/>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+                        <button onclick="copyTextToClipboard(AI_CRIME_SCENE_PROMPTS['${key}'].prompt, '${item.title}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs mono py-2 rounded-lg transition">
+                            <i class="fa-regular fa-copy mr-1"></i>Copy Prompt
+                        </button>
+                        <button onclick="generateClueOrStudioAIImage('${key}')" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs mono py-2 rounded-lg transition">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate Live AI Image
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function confrontWithClue(clueId) {
+            switchTab('interrogate');
+            const selectEl = document.getElementById('interrogation-evidence-select');
+            if (selectEl) {
+                selectEl.value = clueId;
+            }
+        }
+
+        function renderWarrantsPanel() {
+            const container = document.getElementById('warrants-container');
+            const unlockedClues = CLUES.filter(c => c.unlocked);
+
+            const optionsHTML = `<option value="">-- Select Evidence Item --</option>` +
+                unlockedClues.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+            container.innerHTML = WARRANTS.map(w => {
+                if (w.approved) {
+                    const unlockedClue = CLUES.find(c => c.id === w.unlocksClueId);
+                    return `
+                        <div class="p-4 rounded-xl bg-emerald-950/20 border border-emerald-600/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[10px] mono uppercase px-2 py-0.5 rounded bg-emerald-900/80 text-emerald-300 font-bold">WARRANT APPROVED</span>
+                                    <i class="fa-solid fa-stamp text-emerald-400 text-lg"></i>
+                                </div>
+                                <h3 class="text-sm font-bold text-white">${w.title}</h3>
+                                <p class="text-xs text-slate-400 mt-1">${w.authority}</p>
+                                <div class="mt-3 p-3 rounded-lg bg-slate-950/90 border border-emerald-800/50">
+                                    <p class="text-xs font-bold text-emerald-400 mb-1">Unlocked File: ${unlockedClue.name}</p>
+                                    <p class="text-xs text-slate-300 leading-relaxed">${unlockedClue.summary}</p>
+                                </div>
+                            </div>
+                            <button onclick="selectedClueId='${w.unlocksClueId}'; switchTab('evidence');" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-xs mono transition">
+                                View Full Forensic Report
+                            </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] mono uppercase px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">Requires Probable Cause</span>
+                                <i class="fa-solid fa-scale-balanced text-cyan-400"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-white">${w.title}</h3>
+                            <p class="text-[11px] mono text-slate-400 mt-0.5">${w.authority}</p>
+                            <p class="text-xs text-slate-300 mt-2 leading-relaxed">${w.description}</p>
+                            <p class="text-[11px] text-amber-400/90 mt-2 italic"><i class="fa-solid fa-key mr-1"></i>Hint: ${w.hint}</p>
+
+                            <div class="mt-3 space-y-2">
+                                <label class="block text-[11px] mono text-slate-400">Attach Supporting Evidence #1:</label>
+                                <select id="warrant-${w.id}-ev1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                                    ${optionsHTML}
+                                </select>
+                                <label class="block text-[11px] mono text-slate-400">Attach Supporting Evidence #2:</label>
+                                <select id="warrant-${w.id}-ev2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                                    ${optionsHTML}
+                                </select>
+                            </div>
+                            <div id="warrant-msg-${w.id}" class="hidden mt-2 text-xs p-2 rounded"></div>
+                        </div>
+
+                        <button onclick="submitWarrantRequest('${w.id}')" class="mt-4 w-full bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold py-2 rounded-lg text-xs mono transition">
+                            <i class="fa-solid fa-file-signature mr-1"></i>Submit Warrant Application
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function submitWarrantRequest(warrantId) {
+            const warrant = WARRANTS.find(w => w.id === warrantId);
+            const ev1 = document.getElementById(`warrant-${warrantId}-ev1`).value;
+            const ev2 = document.getElementById(`warrant-${warrantId}-ev2`).value;
+            const msgBox = document.getElementById(`warrant-msg-${warrantId}`);
+
+            const picked = [ev1, ev2];
+            const hasAllRequired = warrant.requiredClues.every(req => picked.includes(req));
+
+            if (hasAllRequired) {
+                warrant.approved = true;
+                const unlockedClue = CLUES.find(c => c.id === warrant.unlocksClueId);
+                if (unlockedClue) unlockedClue.unlocked = true;
+                updateHeaderCounters();
+                showToast("Warrant Signed & Approved!", `${unlockedClue.name} is now unlocked in your Evidence Locker.`, "fa-stamp");
+                renderWarrantsPanel();
+            } else {
+                msgBox.className = "mt-2 text-xs p-2 rounded bg-red-950/90 border border-red-700 text-red-300";
+                msgBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i><strong>DENIED:</strong> Insufficient probable cause. Check the required evidence hint and inspect more pins on the 2D crime photo.`;
+                msgBox.classList.remove('hidden');
+            }
+        }
+
+        /****************************************************************************************
+         * 6. 1-ON-1 SUSPECT & WITNESS INTERROGATION ENGINE (GEMINI API + FALLBACK)
+         ****************************************************************************************/
+        function renderInterrogationPanel() {
+            const rosterEl = document.getElementById('suspect-roster');
+            const activeSuspect = SUSPECTS.find(s => s.id === activeSuspectId);
+
+            rosterEl.innerHTML = SUSPECTS.map(s => {
+                const isSelected = s.id === activeSuspectId;
+                return `
+                    <button onclick="activeSuspectId='${s.id}'; renderInterrogationPanel();" class="w-full text-left p-2.5 rounded-xl border transition flex items-center justify-between ${isSelected ? 'bg-emerald-500/15 border-emerald-500 text-white' : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300'}">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-full ${isSelected ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'} flex items-center justify-center font-bold text-xs">
+                                ${s.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold">${s.name}</p>
+                                <p class="text-[10px] mono text-slate-400">${s.role}</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] mono px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-amber-400">Stress: ${s.stress}%</span>
+                    </button>
+                `;
+            }).join('');
+
+            const cardEl = document.getElementById('active-suspect-card');
+            const stressColor = activeSuspect.stress > 70 ? 'bg-red-500' : activeSuspect.stress > 45 ? 'bg-amber-500' : 'bg-emerald-500';
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-white">${activeSuspect.name} (Age ${activeSuspect.age})</span>
+                    <span class="text-[10px] mono uppercase px-2 py-0.5 rounded bg-slate-800 text-amber-300">${activeSuspect.status}</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed mb-3"><strong>Stated Alibi:</strong> ${activeSuspect.alibi}</p>
+                <div>
+                    <div class="flex justify-between text-[11px] mono mb-1">
+                        <span class="text-slate-400">HEART RATE / STRESS MONITOR</span>
+                        <span class="text-amber-400 font-bold">${activeSuspect.stress}%</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                        <div class="h-full ${stressColor} transition-all duration-500" style="width: ${activeSuspect.stress}%"></div>
+                    </div>
+                </div>
+            `;
+
+            const selectEl = document.getElementById('interrogation-evidence-select');
+            const currentVal = selectEl.value;
+            const unlockedClues = CLUES.filter(c => c.unlocked);
+            selectEl.innerHTML = `<option value="">-- No Evidence Attached (Verbal Question Only) --</option>` +
+                unlockedClues.map(c => `<option value="${c.id}">[EVIDENCE] ${c.name}</option>`).join('');
+            if (unlockedClues.some(c => c.id === currentVal)) {
+                selectEl.value = currentVal;
+            }
+
+            const quickBar = document.getElementById('quick-questions-bar');
+            quickBar.innerHTML = `<span class="text-[11px] mono text-slate-400 mr-1"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i>Prompts:</span>` +
+                activeSuspect.quickQuestions.map(q => `
+                    <button onclick="askQuickQuestion('${q.replace(/'/g, "\\'")}')" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg transition">
+                        "${q}"
+                    </button>
+                `).join('');
+
+            renderChatTranscript();
+        }
+
+        function renderChatTranscript() {
+            const activeSuspect = SUSPECTS.find(s => s.id === activeSuspectId);
+            const chatEl = document.getElementById('chat-transcript');
+
+            chatEl.innerHTML = activeSuspect.chatHistory.map(m => {
+                if (m.sender === 'detective') {
+                    return `
+                        <div class="flex justify-end">
+                            <div class="max-w-lg bg-amber-500/15 border border-amber-500/40 text-slate-100 rounded-2xl rounded-tr-none px-4 py-2.5 text-xs sm:text-sm">
+                                <div class="text-[10px] mono uppercase text-amber-400 font-bold mb-1">Detective (You)</div>
+                                ${m.evidenceName ? `<div class="mb-1.5 inline-block bg-amber-500 text-slate-950 font-bold text-[10px] mono px-2 py-0.5 rounded"><i class="fa-solid fa-folder-open mr-1"></i>PRESENTED: ${m.evidenceName}</div>` : ''}
+                                <p>${m.text}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="flex justify-start">
+                            <div class="max-w-lg bg-slate-950 border border-slate-800 text-slate-200 rounded-2xl rounded-tl-none px-4 py-2.5 text-xs sm:text-sm shadow">
+                                <div class="text-[10px] mono uppercase text-emerald-400 font-bold mb-1">${activeSuspect.name}</div>
+                                <p class="leading-relaxed">${m.text}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            chatEl.scrollTop = chatEl.scrollHeight;
+        }
+
+        function askQuickQuestion(qText) {
+            document.getElementById('interrogation-input').value = qText;
+            handleInterrogationSubmit(new Event('submit'));
+        }
+
+        async function callGeminiInterrogation(suspect, questionText, presentedClue) {
+            const discoveredList = CLUES.filter(c => c.unlocked).map(c => `${c.name}: ${c.summary}`).join('\n');
+            const recentHistory = suspect.chatHistory.slice(-6).map(m => `${m.sender.toUpperCase()}: ${m.text}`).join('\n');
+
+            const systemPrompt = `${suspect.systemPrompt}\n\nCURRENT STRESS LEVEL: ${suspect.stress}%\nDISCOVERED EVIDENCE BY DETECTIVE SO FAR:\n${discoveredList}`;
+            const userPrompt = `Recent Conversation:\n${recentHistory}\n\nDetective's New Action:\n${presentedClue ? `[DETECTIVE SLAMS EVIDENCE ON TABLE: ${presentedClue.name} - ${presentedClue.summary}]` : '[No physical evidence presented]'}\nDetective asks: "${questionText}"\n\nRespond in character as ${suspect.name} in 2 to 4 dramatic sentences:`;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            const delays = [1000, 2000, 4000];
+            for (let attempt = 0; attempt <= delays.length; attempt++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error("API status error");
+                    const data = await response.json();
+                    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (reply) return reply.trim();
+                } catch (err) {
+                    if (attempt < delays.length) {
+                        await new Promise(r => setTimeout(r, delays[attempt]));
+                    }
+                }
+            }
+            return getDeterministicFallbackReply(suspect, questionText, presentedClue);
+        }
+
+        function getDeterministicFallbackReply(suspect, questionText, presentedClue) {
+            const q = questionText.toLowerCase();
+            const cId = presentedClue ? presentedClue.id : "";
+
+            if (suspect.id === "suspect_rk") {
+                if (cId === "clue_broken_watch" || cId === "clue_cctv_logs" || q.includes("watch") || q.includes("11:42")) {
+                    return "Alright, alright! My watch broke at 11:42 PM! I went to Room 204 to beg Victor not to turn that audit ledger over to the feds, and we shoved each other—but I swear he was already gasping and turning blue before I even touched him!";
+                }
+                if (cId === "clue_bloody_trophy" || cId === "clue_financial_ledger" || q.includes("trophy") || q.includes("400")) {
+                    return "Yes, I swung the brass trophy in a panic when he grabbed my coat, and I ran! But check the medical report, Detective—when I walked in at 11:38 PM, Elena's silver Jaguar was speeding out of the lot and Victor was already choking to death!";
+                }
+                return "I told you, Victor and I had normal corporate disagreements, nothing worth killing over! Unless you have physical proof placing me in Room 204 at 11:42 PM, I want my lawyer.";
+            }
+
+            if (suspect.id === "suspect_elena") {
+                if (cId === "clue_elena_search" || (q.includes("keycard") && q.includes("insurance"))) {
+                    return "You actually got a warrant for my Jaguar? Fine! At midnight that divorce clause would have left me with nothing while Victor kept millions. I poured him one last glass of Scotch with Batch #88 at 11:25 PM—and that idiot Robert King walked in ten minutes later and hit a dying man!";
+                }
+                if (cId === "clue_whiskey_glass" || cId === "clue_cyanide_vial" || q.includes("lipstick") || q.includes("cyanide")) {
+                    return "So my Crimson Velvet lipstick is on a whiskey glass in my husband's motel room—since when is having a drink with one's spouse a felony? Unless you can prove I took that vial from the chemical vault, this is pure speculation.";
+                }
+                return "I was at the Opera Gala all evening, Detective. Have you checked Robert King's embezzlement files? He had four hundred thousand reasons to bash Victor's head in.";
+            }
+
+            if (suspect.id === "suspect_marcus") {
+                if (cId === "clue_whiskey_glass" || cId === "clue_cyanide_vial" || cId === "clue_cctv_logs" || q.includes("jaguar") || q.includes("woman") || q.includes("elena")) {
+                    return "Okay, I'll come clean! At 11:10 PM, Victor's wife Elena pulled up in a silver Jaguar and slipped me $500 cash to keep her off the guest ledger. She walked out of Room 204 at 11:30 PM, eight minutes before Robert King showed up!";
+                }
+                return "I heard a crash in Room 204 right at 11:42 PM and saw Robert King bolt out the door holding his wrist. I called 911 from the payphone across the street so my name wouldn't show up on the precinct report.";
+            }
+            return "I have nothing more to say without counsel present.";
+        }
+
+        async function handleInterrogationSubmit(e) {
+            if (e) e.preventDefault();
+            const inputEl = document.getElementById('interrogation-input');
+            const selectEl = document.getElementById('interrogation-evidence-select');
+            const sendBtn = document.getElementById('interrogation-send-btn');
+
+            const text = inputEl.value.trim();
+            const evidenceId = selectEl.value;
+            if (!text && !evidenceId) return;
+
+            const suspect = SUSPECTS.find(s => s.id === activeSuspectId);
+            const presentedClue = CLUES.find(c => c.id === evidenceId);
+            const finalQuestion = text || `Explain this ${presentedClue.name} right now!`;
+
+            if (presentedClue) {
+                suspect.stress = Math.min(98, suspect.stress + 22);
+            } else {
+                suspect.stress = Math.min(95, suspect.stress + 5);
+            }
+
+            suspect.chatHistory.push({
+                sender: 'detective',
+                text: finalQuestion,
+                evidenceName: presentedClue ? presentedClue.name : null
+            });
+
+            inputEl.value = '';
+            renderInterrogationPanel();
+
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+
+            const reply = await callGeminiInterrogation(suspect, finalQuestion, presentedClue);
+            suspect.chatHistory.push({ sender: 'suspect', text: reply });
+
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = `<span>Question</span><i class="fa-solid fa-paper-plane"></i>`;
+            renderInterrogationPanel();
+        }
+
+        /****************************************************************************************
+         * 7. PAST CASES ARCHIVE & FINAL CASE RESOLUTION
+         ****************************************************************************************/
+        function renderArchivePanel() {
+            const container = document.getElementById('archive-cases-container');
+            container.innerHTML = PAST_CASES.map(c => `
+                <div class="bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div class="aspect-[16/9] bg-slate-900 border-b border-slate-800">
+                            <img src="${c.svg}" alt="${c.title}" class="w-full h-full object-contain"/>
+                        </div>
+                        <div class="p-4">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-[10px] mono uppercase px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">${c.code}</span>
+                                <span class="text-[10px] mono text-emerald-400">${c.status}</span>
+                            </div>
+                            <h3 class="text-sm font-bold text-white mt-1">${c.title}</h3>
+                            <p class="text-xs text-slate-300 mt-2 leading-relaxed">${c.summary}</p>
+                        </div>
+                    </div>
+                    <div class="p-3.5 m-3 mt-0 rounded-lg bg-amber-950/25 border border-amber-500/30 text-xs text-amber-200 leading-relaxed">
+                        <i class="fa-solid fa-link text-amber-400 mr-1"></i>${c.connection}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSolvePanel() {
+            const evSelect = document.getElementById('solve-evidence');
+            const unlockedClues = CLUES.filter(c => c.unlocked);
+            evSelect.innerHTML = `<option value="">-- Select Decisive Forensic Proof --</option>` +
+                unlockedClues.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            document.getElementById('solve-result-box').classList.add('hidden');
+        }
+
+        function submitFinalIndictment() {
+            const killer = document.getElementById('solve-killer').value;
+            const method = document.getElementById('solve-method').value;
+            const evidence = document.getElementById('solve-evidence').value;
+            const motive = document.getElementById('solve-motive').value;
+            const resBox = document.getElementById('solve-result-box');
+
+            resBox.classList.remove('hidden');
+
+            if (!killer || !method || !evidence || !motive) {
+                resBox.className = "p-4 rounded-xl border bg-amber-950/80 border-amber-600 text-amber-200 text-xs";
+                resBox.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1.5"></i>Please complete all four fields on the indictment form before submitting to the District Attorney.`;
+                return;
+            }
+
+            const validEvidenceIds = ["clue_elena_search", "clue_autopsy_report", "clue_cyanide_vial", "clue_whiskey_glass"];
+
+            if (killer === "suspect_elena" && method === "cyanide_whiskey" && motive === "insurance_divorce" && validEvidenceIds.includes(evidence)) {
+                resBox.className = "p-5 rounded-xl border bg-emerald-950/90 border-emerald-500 text-emerald-100 text-xs sm:text-sm space-y-2";
+                resBox.innerHTML = `
+                    <div class="flex items-center space-x-2 text-emerald-400 font-bold mono uppercase text-sm">
+                        <i class="fa-solid fa-medal text-lg"></i>
+                        <span>CASE #409 SOLVED // TRUE DETECTIVE DISTINCTION</span>
+                    </div>
+                    <p class="leading-relaxed">
+                        <strong>District Attorney Verdict:</strong> Indictment Confirmed! You saw straight through the staged blunt-force trauma trap.
+                        <strong>Elena Vance</strong> poisoned Victor Vance's whiskey with Potassium Cyanide (Batch #88) at 11:25 PM so he would die before their 12:00 AM midnight divorce deadline voided her $2,000,000 life insurance payout.
+                    </p>
+                    <p class="text-xs text-emerald-300/90">
+                        Robert King was charged separately with felony tampering and embezzlement after striking an already-dying man at 11:42 PM. Outstanding forensic work, Detective!
+                    </p>
+                `;
+            } else if (killer === "suspect_rk") {
+                resBox.className = "p-4 rounded-xl border bg-red-950/90 border-red-600 text-red-200 text-xs leading-relaxed";
+                resBox.innerHTML = `
+                    <div class="font-bold text-red-400 mono uppercase mb-1"><i class="fa-solid fa-xmark mr-1"></i>INDICTMENT REJECTED BY CORONER & D.A.</div>
+                    You arrested <strong>Robert King</strong> for the brass trophy strike at 11:42 PM—falling for the classic surface clue! Look closely at the low blood volume on the body (#1), the whiskey glass with lipstick & bitter almond odor (#3), and request the <strong>Coroner Autopsy Warrant</strong> to find out what actually killed Victor Vance before 11:42 PM.
+                `;
+            } else {
+                resBox.className = "p-4 rounded-xl border bg-red-950/90 border-red-600 text-red-200 text-xs leading-relaxed";
+                resBox.innerHTML = `
+                    <div class="font-bold text-red-400 mono uppercase mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>INSUFFICIENT OR CONTRADICTORY INDICTMENT</div>
+                    The District Attorney rejected your theory. Double-check the toxicology findings, the midnight insurance motive, and the physical evidence linking the true poisoner to Batch #88.
+                `;
+            }
+        }
+
+        window.onload = function () {
+            render2DCrimeSceneBoard();
+            updateHeaderCounters();
+        };
+    </script>
+</body>
+</html>
